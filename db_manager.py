@@ -10,6 +10,7 @@ from sqlalchemy.orm import relationship
 
 # for configuration
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 # create declarative_base instance
 Base = declarative_base()
@@ -32,5 +33,20 @@ class Book(Base):
 # creates a create_engine instance at the bottom of the file
 # Turns off the check_same_thread for simplicity
 engine = create_engine('sqlite:///books-collection.db', connect_args={'check_same_thread': False})
-
 Base.metadata.create_all(engine)
+
+DBSession = sessionmaker(bind=engine)
+session = DBSession()
+
+
+def get_all_books():
+    return session.query(Book).all()
+
+
+def get_book_by_id(book_id):
+    return session.query(Book).filter_by(id=book_id).one()
+
+
+def create_update_book(book: Book):
+    session.add(book)
+    session.commit()

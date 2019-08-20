@@ -1,25 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from db_manager import Base, Book
+from db_manager import *
 from flask import jsonify
 
 app = Flask(__name__)
 
-# Connect to Database and create database session
-engine = create_engine('sqlite:///books-collection.db', connect_args={'check_same_thread': False})
-Base.metadata.bind = engine
-
-DBSession = sessionmaker(bind=engine)
-session = DBSession()
-
+#
 
 # landing page that will display all the books in our database
 # This function operate on the Read operation.
 @app.route('/')
 @app.route('/books')
 def show_books():
-    books = session.query(Book).all()
+    books = get_all_books()
     return render_template("books.html", books=books)
 
 
@@ -27,9 +19,8 @@ def show_books():
 @app.route('/books/new/', methods=['GET', 'POST'])
 def new_book():
     if request.method == 'POST':
-        created_book = Book(title=request.form['name'], author=request.form['author'], genre=request.form['genre'])
-        session.add(created_book)
-        session.commit()
+        create_update_book(Book(title=request.form['name'], author=request.form['author'], genre=request.form['genre']))
+
         return redirect(url_for('show_books'))
     else:
         return render_template('newBook.html')
@@ -38,7 +29,7 @@ def new_book():
 # This will let us Update our books and save it in our database
 @app.route("/books/<int:book_id>/edit/", methods=['GET', 'POST'])
 def edit_book(book_id):
-    edited_book = session.query(Book).filter_by(id=book_id).one()
+    edited_book = get_book_by_id(book_id)
     if request.method == 'POST':
         if request.form['name']:
             edited_book.title = request.form['name']
@@ -50,7 +41,7 @@ def edit_book(book_id):
 # This will let us Delete our book
 @app.route('/books/<int:book_id>/delete/', methods=['GET', 'POST'])
 def delete_book(book_id):
-    book_to_delete = session.query(Book).filter_by(id=book_id).one()
+    book_to_delete = get_book_by_id(book_id)
     if request.method == 'POST':
         session.delete(book_to_delete)
         session.commit()
@@ -76,8 +67,7 @@ def get_book(book_id):
 
 def make_a_new_book(title, author, genre):
     added_book = Book(title=title, author=author, genre=genre)
-    session.add(added_book)
-    session.commit()
+    create_update_book(added_book)
     return jsonify(Book=added_book.serialize)
 
 
@@ -89,8 +79,7 @@ def update_book(id, title, author, genre):
         updated_book.author = author
     if not genre:
         updated_book.genre = genre
-    session.add(updated_book)
-    session.commit()
+    create_update_book(updated_book)
     return 'Updated a Book with id %s' % id
 
 
